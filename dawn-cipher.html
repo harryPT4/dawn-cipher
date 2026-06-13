@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dawn Cipher · June Solstice Game Jam 2026</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --night:#05051a; --deep:#0d0d2b; --gold:#ffd700; --amber:#ffb700;
+  --orange:#ff8c00; --dawn:#ff6b35; --rose:#ff3366;
+  --text:#ddd8ff; --muted:#6060a0;
+  --dim:rgba(255,255,255,0.06); --border:rgba(255,255,255,0.11);
+  --ok:#39ff14; --err:#ff3366;
+  --pr:#e40303; --po:#ff8c00; --py:#ffed00;
+  --pg:#008026; --pb:#004dff; --pv:#750787;
+}
+
+html,body { width:100%; min-height:100vh; background:var(--night); color:var(--text);
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif; overflow-x:hidden; }
+
+/* ── Stars ─────────────────────────────────────────────── */
+#stars { position:fixed; inset:0; pointer-events:none; z-index:0; }
+.star { position:absolute; background:#fff; border-radius:50%;
+  animation:twinkle var(--dur,3s) ease-in-out infinite var(--delay,0s); }
+@keyframes twinkle {
+  0%,100%{opacity:var(--mo,.2);transform:scale(1)} 50%{opacity:1;transform:scale(1.4)} }
+
+/* ── Screens ─────────────────────────────────────────────── */
+.screen { display:none; position:fixed; inset:0; z-index:10;
+  flex-direction:column; align-items:center; justify-content:center;
+  padding:20px; overflow-y:auto; }
+.screen.active { display:flex; }
+.screen.fade-in { animation:scFade .4s ease both; }
+@keyframes scFade { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+.fade-up { animation:fadeUp .5s ease both; }
+
+/* ── Title ───────────────────────────────────────────────── */
+#title-screen {
+  background:linear-gradient(180deg,#05051a 0%,#0d0928 45%,#180a22 70%,#220a0a 100%);
+  text-align:center; }
+.horizon { position:absolute; bottom:0; left:0; right:0; height:220px;
+  background:linear-gradient(180deg,transparent,#160618 35%,#2a0a20 65%,#3d0a08 100%);
+  pointer-events:none; }
+.sun-rays { position:absolute; bottom:-28px; left:50%; transform:translateX(-50%);
+  width:360px; height:240px; border-radius:50%;
+  background:radial-gradient(ellipse,rgba(255,200,0,.16) 0%,rgba(255,140,0,.08) 36%,transparent 70%);
+  pointer-events:none; animation:rayPulse 4s ease-in-out infinite; }
+@keyframes rayPulse { 0%,100%{opacity:.6;transform:translateX(-50%) scale(1)}
+  50%{opacity:1;transform:translateX(-50%) scale(1.1)} }
+.sun-rise { position:absolute; bottom:-22px; left:50%; transform:translateX(-50%);
+  width:96px; height:96px;
+  background:radial-gradient(circle,#fffde0 10%,#ffd700 40%,#ff8c00 75%,transparent 100%);
+  border-radius:50%;
+  box-shadow:0 0 54px 22px rgba(255,200,0,.34),0 0 120px 52px rgba(255,140,0,.2);
+  animation:sunPulse 4s ease-in-out infinite; }
+@keyframes sunPulse { 0%,100%{transform:translateX(-50%) scale(1)} 50%{transform:translateX(-50%) scale(1.07)} }
+
+.title-wrap { position:relative; z-index:2; max-width:580px; width:100%;
+  display:flex; flex-direction:column; align-items:center; }
+.title-eyebrow { font-size:.7rem; letter-spacing:.35em; text-transform:uppercase;
+  color:#ffc54a; margin-bottom:14px; text-shadow:0 0 18px rgba(255,183,0,.25); }
+.title-main { font-size:clamp(3.2rem,9vw,5.8rem); font-weight:900; letter-spacing:.04em;
+  line-height:.95;
+  background:linear-gradient(135deg,#fffbea 0%,#ffe45c 32%,#ff9f22 62%,#ff4f7c 100%);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  background-clip:text; margin-bottom:10px;
+  filter:drop-shadow(0 0 22px rgba(255,183,0,.22)); }
+.title-sub { font-size:.85rem; color:#8e87d8; letter-spacing:.2em;
+  text-transform:uppercase; margin-bottom:28px; }
+.pride-strip { display:flex; width:280px; height:5px; border-radius:3px;
+  overflow:hidden; margin-bottom:28px;
+  box-shadow:0 0 14px 4px rgba(255,255,255,.1); }
+.pride-strip span { flex:1; }
+.title-tagline { font-size:1rem; color:var(--text); line-height:1.7;
+  max-width:440px; margin-bottom:36px; opacity:.94; text-shadow:0 2px 18px rgba(0,0,0,.55); }
+
+/* ── Buttons ─────────────────────────────────────────────── */
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  padding:13px 30px; border:none; border-radius:50px; font-size:.95rem; font-weight:600;
+  cursor:pointer; transition:transform .15s,box-shadow .15s; letter-spacing:.04em;
+  white-space:nowrap; }
+.btn:active { transform:scale(.96)!important; }
+.btn:disabled { opacity:.55; cursor:not-allowed; transform:none!important; box-shadow:none!important; }
+.btn-primary { background:linear-gradient(135deg,#ffe15a,#ff9d22); color:#0a0a1a;
+  box-shadow:0 10px 34px rgba(255,156,34,.18); }
+.btn-primary:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(255,180,0,.38); }
+.btn-secondary { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); color:var(--text);
+  backdrop-filter:blur(6px); }
+.btn-secondary:hover { background:rgba(255,255,255,.1); }
+.btn-success { background:linear-gradient(135deg,#39ff14,#00b248); color:#0a0a1a; }
+.btn-ghost { background:none; border:none; color:var(--amber); font-size:.8rem;
+  cursor:pointer; text-decoration:underline; padding:4px 0; letter-spacing:.05em; }
+.btn-ghost:hover { opacity:.75; }
+
+/* ── Light meter ─────────────────────────────────────────── */
+#light-meter { position:fixed; top:0; left:0; right:0; z-index:200;
+  background:rgba(5,5,26,.95); border-bottom:1px solid var(--border);
+  backdrop-filter:blur(8px); padding:9px 20px;
+  display:none; align-items:center; gap:14px; }
+#light-meter.visible { display:flex; }
+.meter-label { font-size:.65rem; letter-spacing:.18em; text-transform:uppercase;
+  color:var(--muted); white-space:nowrap; }
+.meter-track { flex:1; height:7px; background:rgba(255,255,255,.07);
+  border-radius:4px; position:relative; overflow:visible; }
+#meter-fill { height:100%; border-radius:4px;
+  background:linear-gradient(90deg,#ffd700,#ff8c00);
+  transition:width .4s ease,background .8s ease; position:relative; }
+.meter-sun { position:absolute; right:-9px; top:50%; transform:translateY(-50%);
+  width:18px; height:18px;
+  background:radial-gradient(circle,#fff9a0,#ffd700); border-radius:50%;
+  box-shadow:0 0 8px 4px rgba(255,210,0,.5); }
+#meter-pct { font-size:.72rem; font-weight:600; color:var(--amber);
+  white-space:nowrap; font-variant-numeric:tabular-nums; min-width:38px; text-align:right; }
+#meter-level-label { font-size:.65rem; color:var(--muted); white-space:nowrap; min-width:60px; }
+
+/* ── Game screen ─────────────────────────────────────────── */
+#game-screen { background:var(--deep); justify-content:flex-start; padding-top:56px; }
+.game-inner { display:flex; flex-direction:column; align-items:center; justify-content:center;
+  width:100%; max-width:720px; margin:0 auto;
+  padding:28px 20px; gap:22px; min-height:calc(100vh - 56px); }
+.level-header { text-align:center; }
+.level-badge { display:inline-block; background:rgba(255,183,0,.12);
+  border:1px solid rgba(255,183,0,.28); color:var(--amber); padding:3px 12px;
+  border-radius:20px; font-size:.65rem; letter-spacing:.22em;
+  text-transform:uppercase; margin-bottom:9px; }
+.level-title { font-size:clamp(1.6rem,4vw,2.3rem); font-weight:800; color:#fff; }
+.level-sub { font-size:.88rem; color:var(--muted); margin-top:5px; }
+
+/* ── Puzzle card ─────────────────────────────────────────── */
+.puzzle-card { background:var(--dim); border:1px solid var(--border);
+  border-radius:18px; padding:28px 24px; width:100%; max-width:660px;
+  transition:box-shadow .4s; }
+.puzzle-card.solved { box-shadow:0 0 40px 8px rgba(57,255,20,.15); border-color:rgba(57,255,20,.25); }
+
+/* ── Caesar ──────────────────────────────────────────────── */
+.cipher-encoded { font-family:'Courier New',monospace;
+  font-size:clamp(1.3rem,4vw,1.9rem); font-weight:700; letter-spacing:.18em;
+  color:var(--amber); text-align:center; padding:18px;
+  background:rgba(0,0,0,.3); border-radius:10px; margin-bottom:18px; word-break:break-all; }
+.cipher-decoded { font-family:'Courier New',monospace;
+  font-size:clamp(1rem,3vw,1.4rem); letter-spacing:.12em; text-align:center;
+  padding:14px; min-height:54px; background:rgba(0,0,0,.18);
+  border-radius:10px; margin-bottom:18px; transition:color .3s,background .3s;
+  word-break:break-all; color:var(--muted); }
+.cipher-decoded.correct { color:var(--ok); background:rgba(57,255,20,.07); }
+.shift-row { display:flex; align-items:center; justify-content:center; gap:18px; margin-bottom:16px; }
+.shift-btn { width:42px; height:42px; border-radius:50%; border:1px solid var(--border);
+  background:var(--dim); color:var(--text); font-size:1.2rem; cursor:pointer;
+  transition:background .15s,border-color .15s; display:flex; align-items:center; justify-content:center; }
+.shift-btn:hover { background:rgba(255,255,255,.11); border-color:var(--amber); }
+.shift-info { text-align:center; min-width:70px; }
+.shift-num { font-size:2.2rem; font-weight:700; color:var(--gold);
+  font-variant-numeric:tabular-nums; line-height:1; }
+.shift-lbl { font-size:.6rem; color:var(--muted); letter-spacing:.18em; text-transform:uppercase; }
+.alpha-strip { display:flex; flex-wrap:wrap; gap:1px; justify-content:center; margin-bottom:14px; }
+.alpha-pair { display:flex; flex-direction:column; align-items:center;
+  width:21px; font-family:monospace; font-size:.65rem; }
+.alpha-pair .a-orig { color:var(--muted); }
+.alpha-pair .a-dec  { color:var(--amber); font-weight:700; }
+
+/* ── Morse ───────────────────────────────────────────────── */
+.morse-signal { font-family:'Courier New',monospace;
+  font-size:clamp(1rem,3vw,1.4rem); letter-spacing:.12em; color:var(--gold);
+  text-align:center; padding:18px; background:rgba(0,0,0,.3);
+  border-radius:10px; margin-bottom:16px; line-height:2.2; word-break:break-word; }
+.morse-grid { display:none; grid-template-columns:repeat(auto-fill,minmax(74px,1fr));
+  gap:3px; padding:12px; background:rgba(0,0,0,.22); border-radius:8px;
+  max-height:180px; overflow-y:auto; font-family:monospace; font-size:.72rem; margin-bottom:14px; }
+.morse-grid.open { display:grid; }
+.mc-e { display:flex; gap:5px; align-items:center; }
+.mc-l { color:var(--amber); font-weight:700; min-width:14px; }
+.mc-c { color:var(--muted); }
+
+/* ── Binary ──────────────────────────────────────────────── */
+.binary-row { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom:18px; }
+.binary-chip { text-align:center; background:rgba(0,0,0,.28); border-radius:8px; padding:10px 14px; }
+.binary-bits { font-family:'Courier New',monospace; font-size:clamp(.85rem,2.5vw,1.1rem);
+  color:var(--gold); letter-spacing:.08em; display:block; }
+.binary-dec { font-size:.65rem; color:var(--muted); margin-top:4px; }
+.ascii-ref { display:none; font-family:monospace; font-size:.72rem; padding:12px;
+  background:rgba(0,0,0,.2); border-radius:8px; line-height:1.9;
+  color:var(--muted); margin-bottom:14px; }
+.ascii-ref.open { display:block; }
+.ascii-ref b { color:var(--amber); }
+
+/* ── Shared input ────────────────────────────────────────── */
+.answer-input { width:100%; padding:13px 18px; background:rgba(0,0,0,.28);
+  border:1px solid var(--border); border-radius:8px; color:var(--text);
+  font-size:1.05rem; font-family:'Courier New',monospace; letter-spacing:.12em;
+  text-transform:uppercase; text-align:center; outline:none; transition:border-color .2s; }
+.answer-input:focus { border-color:var(--amber); }
+.answer-input.ok  { border-color:var(--ok);  background:rgba(57,255,20,.06); }
+.answer-input.bad { border-color:var(--err); animation:shake .4s; }
+.answer-input:disabled { opacity:.72; }
+@keyframes shake {
+  0%,100%{transform:translateX(0)} 20%{transform:translateX(-7px)}
+  40%{transform:translateX(7px)}   60%{transform:translateX(-5px)} 80%{transform:translateX(5px)} }
+
+/* ── Turing Test ─────────────────────────────────────────── */
+.api-note { background:rgba(255,183,0,.09); border:1px solid rgba(255,183,0,.25);
+  border-radius:8px; padding:10px 14px; font-size:.78rem; color:var(--amber);
+  text-align:center; margin-bottom:14px; transition:all .4s; }
+.api-note.connected { background:rgba(57,255,20,.06); border-color:rgba(57,255,20,.35); color:var(--ok); }
+.api-note-title { font-weight:700; color:var(--amber); }
+.api-note-copy { color:rgba(221,216,255,.72); margin-top:3px; }
+.api-note .key-row { display:flex; gap:8px; justify-content:center; margin-top:8px; }
+.api-note input { background:rgba(0,0,0,.3); border:1px solid var(--border);
+  border-radius:5px; color:var(--text); font-family:monospace; font-size:.75rem;
+  padding:5px 10px; flex:1; max-width:260px; outline:none; }
+.chat-qs { font-size:.72rem; color:var(--muted); text-align:center; margin-bottom:10px; }
+.chat-box { background:rgba(0,0,0,.28); border-radius:10px; padding:16px;
+  height:260px; overflow-y:auto; display:flex; flex-direction:column; gap:12px;
+  margin-bottom:14px; scroll-behavior:smooth; }
+.chat-msg { display:flex; flex-direction:column; max-width:82%; }
+.chat-msg.them { align-self:flex-start; }
+.chat-msg.you  { align-self:flex-end; }
+.chat-sender { font-size:.62rem; color:var(--muted); letter-spacing:.1em; margin-bottom:4px; }
+.chat-msg.you .chat-sender { text-align:right; }
+.chat-bubble { padding:9px 13px; border-radius:12px; font-size:.88rem; line-height:1.55; }
+.chat-msg.them .chat-bubble { background:rgba(255,255,255,.09); border-radius:2px 12px 12px 12px; }
+.chat-msg.you  .chat-bubble { background:rgba(255,183,0,.17);
+  border:1px solid rgba(255,183,0,.25); border-radius:12px 2px 12px 12px; }
+.chat-msg.typing .chat-bubble { color:var(--muted); font-style:italic; }
+/* Typing dots */
+.dots span { animation:dotBlink 1.2s infinite; display:inline-block; }
+.dots span:nth-child(2) { animation-delay:.2s; }
+.dots span:nth-child(3) { animation-delay:.4s; }
+@keyframes dotBlink { 0%,80%,100%{opacity:.2;transform:scale(.8)} 40%{opacity:1;transform:scale(1)} }
+.chat-input-row { display:flex; gap:8px; }
+.chat-input-row .answer-input { text-transform:none; text-align:left; flex:1; }
+.verdict-row { display:none; flex-direction:column; align-items:center; gap:10px; margin-top:14px; }
+.verdict-row.open { display:flex; }
+.verdict-label { font-size:.85rem; color:var(--text); }
+.verdict-btns { display:flex; gap:12px; }
+/* Gemini badge */
+.gemini-badge { display:inline-block; font-size:.6rem; letter-spacing:.1em;
+  background:rgba(57,255,20,.12); border:1px solid rgba(57,255,20,.3);
+  color:var(--ok); padding:2px 7px; border-radius:10px; margin-left:6px;
+  text-transform:uppercase; }
+
+/* ── Puzzle footer ───────────────────────────────────────── */
+.puzzle-footer { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:16px; }
+.feedback { text-align:center; font-size:.88rem; min-height:22px; margin-top:10px; transition:opacity .3s; }
+.feedback.ok  { color:var(--ok); }
+.feedback.err { color:var(--err); }
+.light-cost { font-size:.62rem; color:var(--orange); }
+
+/* ── Fragment screen ─────────────────────────────────────── */
+#fragment-screen { background:radial-gradient(ellipse at 50% 60%,#1a0a2e,#05051a);
+  text-align:center; gap:28px; }
+.frag-label { font-size:.65rem; letter-spacing:.3em; text-transform:uppercase; color:var(--muted); }
+.frag-tiles { display:flex; gap:10px; justify-content:center; }
+.frag-tile { width:44px; height:44px; border-radius:7px;
+  background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.07);
+  transition:background .7s cubic-bezier(.34,1.56,.64,1),box-shadow .7s,border-color .7s; }
+.frag-tile.lit { border-color:transparent; }
+.frag-text { max-width:540px; font-size:1rem; line-height:1.82; color:var(--text);
+  font-style:italic; opacity:0; transition:opacity .8s ease; }
+.frag-text.show { opacity:1; }
+.frag-attr { font-size:.78rem; color:var(--muted); font-style:normal; }
+
+/* ── Game over ───────────────────────────────────────────── */
+#gameover-screen { background:radial-gradient(ellipse at 50% 60%,#1a0505,#05051a);
+  text-align:center; gap:22px; }
+.go-icon  { font-size:4.5rem; }
+.go-title { font-size:2.6rem; font-weight:800; color:var(--dawn); }
+.go-text  { font-size:.95rem; color:var(--muted); max-width:380px; line-height:1.7; }
+
+/* ── Ending screen ───────────────────────────────────────── */
+#ending-screen { background:radial-gradient(ellipse at 50% 50%,#12120a,#05051a);
+  text-align:center; gap:26px; padding:40px 20px; }
+.ending-kicker { font-size:.65rem; letter-spacing:.3em; text-transform:uppercase; color:var(--amber); }
+.ending-mosaic { display:grid; grid-template-columns:repeat(6,42px);
+  grid-template-rows:repeat(4,42px); gap:5px; justify-content:center; }
+.em-tile { border-radius:6px; animation:tileIn .5s cubic-bezier(.34,1.56,.64,1) both; }
+@keyframes tileIn { from{opacity:0;transform:scale(0) rotate(20deg)} to{opacity:1;transform:scale(1) rotate(0)} }
+.ending-quote { font-size:clamp(1rem,2.8vw,1.25rem); font-style:italic;
+  max-width:500px; line-height:1.75; color:var(--text); }
+.ending-attr { font-size:.82rem; color:var(--muted); }
+.ending-body { max-width:480px; font-size:.9rem; line-height:1.75; color:rgba(221,216,255,.75); }
+.ending-coda { max-width:440px; font-size:.82rem; line-height:1.65; color:var(--muted); }
+
+/* ── Particles ───────────────────────────────────────────── */
+.particle { position:fixed; pointer-events:none; z-index:999;
+  border-radius:50%; animation:particleFly var(--dur,.8s) ease-out forwards; }
+@keyframes particleFly {
+  0%   { opacity:1; transform:translate(0,0) scale(1); }
+  100% { opacity:0; transform:translate(var(--dx,0px),var(--dy,-80px)) scale(0); }
+}
+
+.hidden { display:none!important; }
+
+/* ── How to play overlay ─────────────────────────────────── */
+#how-to-play {
+  position:fixed; inset:0; z-index:500;
+  background:rgba(3,3,17,.97); backdrop-filter:blur(8px);
+  display:flex; align-items:center; justify-content:center;
+  padding:20px; animation:scFade .3s ease both;
+}
+#how-to-play.hidden { display:none; }
+.htp-card {
+  background:linear-gradient(180deg,rgba(13,13,43,.98),rgba(8,8,30,.99));
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:20px; padding:36px 32px; max-width:480px; width:100%;
+  text-align:center; box-shadow:0 28px 80px rgba(0,0,0,.55);
+}
+.htp-title { font-size:1.5rem; font-weight:800; color:#fff; margin-bottom:6px; }
+.htp-sub   { font-size:.8rem; color:var(--muted); letter-spacing:.15em;
+  text-transform:uppercase; margin-bottom:24px; }
+.htp-steps { list-style:none; display:flex; flex-direction:column;
+  gap:12px; margin-bottom:28px; text-align:left; }
+.htp-steps li { display:flex; gap:14px; align-items:flex-start;
+  font-size:.92rem; line-height:1.5; }
+.htp-steps li .icon { font-size:1.3rem; flex-shrink:0; margin-top:1px; }
+.htp-steps li .desc { color:var(--text); }
+.htp-steps li .desc strong { color:var(--amber); }
+.htp-warn { font-size:.8rem; color:var(--orange); margin-bottom:20px;
+  padding:8px 14px; background:rgba(255,140,0,.08);
+  border:1px solid rgba(255,140,0,.2); border-radius:8px; }
+
+/* ── Completion stats on ending ──────────────────────────── */
+.end-stats { display:flex; gap:20px; justify-content:center; flex-wrap:wrap; }
+.stat-chip { background:var(--dim); border:1px solid var(--border);
+  border-radius:10px; padding:10px 20px; text-align:center; }
+.stat-val  { font-size:1.6rem; font-weight:700; color:var(--gold);
+  font-variant-numeric:tabular-nums; }
+.stat-lbl  { font-size:.65rem; color:var(--muted); letter-spacing:.15em;
+  text-transform:uppercase; margin-top:2px; }
+
+/* ── Mobile fixes ────────────────────────────────────────── */
+@media(max-width:500px){
+  .puzzle-card { padding:20px 16px; }
+  .cipher-encoded { font-size:1.1rem; letter-spacing:.1em; }
+  .alpha-strip { display:none; }
+  .shift-num { font-size:1.8rem; }
+  .api-note .key-row { flex-direction:column; }
+  .api-note input { max-width:none; }
+  .ending-mosaic { grid-template-columns:repeat(4,38px); grid-template-rows:repeat(6,38px); }
+  .htp-card { padding:24px 18px; max-height:calc(100vh - 40px); overflow-y:auto; }
+}
+</style>
+</head>
+<body>
+
+<div id="stars"></div>
+
+<!-- How to play overlay -->
+<div id="how-to-play" class="hidden">
+  <div class="htp-card">
+    <h2 class="htp-title">How to Play</h2>
+    <p class="htp-sub">Four ciphers · One solstice</p>
+    <ul class="htp-steps">
+      <li><span class="icon">🔐</span><div class="desc"><strong>Cipher I — The Shift:</strong> Use the arrow buttons (or ← → keys) to rotate the decoder until a message appears.</div></li>
+      <li><span class="icon">📡</span><div class="desc"><strong>Cipher II — The Signal:</strong> Decode dots and dashes using the Morse chart. Type your answer.</div></li>
+      <li><span class="icon">💻</span><div class="desc"><strong>Cipher III — The Machine:</strong> Convert binary numbers to letters. Use the ASCII reference if needed.</div></li>
+      <li><span class="icon">🤖</span><div class="desc"><strong>Cipher IV — The Question:</strong> Ask ENTITY-1 five questions, then decide — Human or AI?</div></li>
+    </ul>
+    <p class="htp-warn">☀ The daylight meter drains in real time. Wrong guesses and hints cost light. Solve fast.</p>
+    <button class="btn btn-primary" onclick="document.getElementById('how-to-play').classList.add('hidden')" style="width:100%">
+      I'm Ready
+    </button>
+  </div>
+</div>
+
+<!-- Light meter -->
+<div id="light-meter">
+  <span class="meter-label">☀ Daylight</span>
+  <div class="meter-track">
+    <div id="meter-fill" style="width:100%"><div class="meter-sun"></div></div>
+  </div>
+  <span id="meter-pct">100%</span>
+  <span id="meter-level-label">Level 1 / 4</span>
+</div>
+
+<!-- ══════════════ TITLE ══════════════ -->
+<div id="title-screen" class="screen active">
+  <div class="horizon"></div>
+  <div class="sun-rays"></div>
+  <div class="sun-rise"></div>
+  <div class="title-wrap fade-up">
+    <p class="title-eyebrow">June Solstice Game Jam 2026</p>
+    <h1 class="title-main">DAWN<br>CIPHER</h1>
+    <p class="title-sub">June 21 · The Longest Day</p>
+    <div class="pride-strip">
+      <span style="background:var(--pr)"></span><span style="background:var(--po)"></span>
+      <span style="background:var(--py)"></span><span style="background:var(--pg)"></span>
+      <span style="background:var(--pb)"></span><span style="background:var(--pv)"></span>
+    </div>
+    <p class="title-tagline">
+      It is the solstice. Four ciphers stand between you and the truth.
+      Daylight is finite. Each answer unlocks a fragment of a forgotten story.
+    </p>
+    <button class="btn btn-primary" onclick="GAME.start()" style="font-size:1.05rem;padding:15px 38px">
+      Begin the Cipher
+    </button>
+    <button class="btn btn-secondary" onclick="GAME.showHowTo()" style="margin-top:12px">
+      How to Play
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════ GAME ══════════════ -->
+<div id="game-screen" class="screen">
+  <div class="game-inner">
+    <div class="level-header fade-up">
+      <div class="level-badge" id="lv-badge">CIPHER I</div>
+      <h2 class="level-title" id="lv-title">The Shift</h2>
+      <p class="level-sub"   id="lv-sub">Adjust the decoder until the message reveals itself.</p>
+    </div>
+
+    <!-- CAESAR -->
+    <div class="puzzle-card fade-up" id="pz-caesar">
+      <div class="cipher-encoded" id="cs-encoded">DL HYL HSS THKL VM SPNOA</div>
+      <div class="cipher-decoded" id="cs-decoded">· · · · · · · · · · · · · · · · · · · · · · · ·</div>
+      <div class="alpha-strip"    id="cs-alpha"></div>
+      <div class="shift-row">
+        <button class="shift-btn" onclick="GAME.caesar.adjust(-1)">◀</button>
+        <div class="shift-info">
+          <div class="shift-num" id="cs-num">0</div>
+          <div class="shift-lbl">SHIFT</div>
+        </div>
+        <button class="shift-btn" onclick="GAME.caesar.adjust(1)">▶</button>
+      </div>
+      <div class="feedback" id="cs-fb"></div>
+      <div class="puzzle-footer">
+        <button class="btn btn-secondary" onclick="GAME.showHint()">💡 Hint <span class="light-cost">(−8% light)</span></button>
+        <button class="btn btn-success hidden" id="cs-confirm" onclick="GAME.solveLevel()">✓ Confirm</button>
+      </div>
+    </div>
+
+    <!-- MORSE -->
+    <div class="puzzle-card fade-up hidden" id="pz-morse">
+      <div class="morse-signal" id="mo-signal"></div>
+      <div style="text-align:center;margin-bottom:10px">
+        <button class="btn-ghost" onclick="GAME.morse.toggleChart()">▼ Morse Alphabet</button>
+      </div>
+      <div class="morse-grid" id="mo-chart"></div>
+      <input class="answer-input" id="mo-input" type="text"
+        placeholder="DECODE THE SIGNAL" aria-label="Morse answer"
+        maxlength="20" autocomplete="off" spellcheck="false"
+        oninput="GAME.morse.check(this.value)"
+        onkeydown="if(event.key==='Enter') GAME.morse.submit()">
+      <div class="feedback" id="mo-fb"></div>
+      <div class="puzzle-footer">
+        <button class="btn btn-secondary" onclick="GAME.showHint()">💡 Hint <span class="light-cost">(−8% light)</span></button>
+      </div>
+    </div>
+
+    <!-- BINARY -->
+    <div class="puzzle-card fade-up hidden" id="pz-binary">
+      <div class="binary-row" id="bi-chips"></div>
+      <div style="text-align:center;margin-bottom:10px">
+        <button class="btn-ghost" onclick="GAME.binary.toggleRef()">▼ ASCII Reference</button>
+      </div>
+      <div class="ascii-ref" id="bi-ref"></div>
+      <input class="answer-input" id="bi-input" type="text"
+        placeholder="DECODE THE BINARY" aria-label="Binary answer"
+        maxlength="20" autocomplete="off" spellcheck="false"
+        oninput="GAME.binary.check(this.value)"
+        onkeydown="if(event.key==='Enter') GAME.binary.submit()">
+      <div class="feedback" id="bi-fb"></div>
+      <div class="puzzle-footer">
+        <button class="btn btn-secondary" onclick="GAME.showHint()">💡 Hint <span class="light-cost">(−8% light)</span></button>
+      </div>
+    </div>
+
+    <!-- TURING TEST -->
+    <div class="puzzle-card fade-up hidden" id="pz-turing">
+      <div class="api-note" id="tu-note">
+        <div class="api-note-title">Scripted mode active</div>
+        <div class="api-note-copy">Optional: connect Gemini for live ENTITY-1 responses.</div>
+        <div class="key-row">
+          <input type="password" id="tu-key" placeholder="Paste Gemini API key (optional)">
+          <button class="btn btn-secondary" id="tu-connect"
+            onclick="GAME.turing.connect()"
+            style="padding:5px 14px;font-size:.8rem;border-radius:6px">Connect</button>
+        </div>
+      </div>
+      <div class="chat-qs" id="tu-qs">5 questions remaining</div>
+      <div class="chat-box" id="tu-chat"></div>
+      <div id="tu-input-area">
+        <div class="chat-input-row">
+          <input class="answer-input" id="tu-input" type="text"
+            placeholder="Ask a question..."
+            style="text-transform:none;text-align:left"
+            autocomplete="off"
+            onkeydown="if(event.key==='Enter') GAME.turing.send()">
+          <button class="btn btn-primary" onclick="GAME.turing.send()" style="padding:13px 18px">Send</button>
+        </div>
+      </div>
+      <div class="verdict-row" id="tu-verdict">
+        <p class="verdict-label">Your verdict — is ENTITY-1 a <strong>Human</strong> or an <strong>AI</strong>?</p>
+        <div class="verdict-btns">
+          <button class="btn btn-secondary" onclick="GAME.turing.verdict('human')">👤 Human</button>
+          <button class="btn btn-secondary" onclick="GAME.turing.verdict('ai')">🤖 AI</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════ FRAGMENT ══════════════ -->
+<div id="fragment-screen" class="screen">
+  <p class="frag-label" id="fr-label">Fragment 1 of 4</p>
+  <div class="frag-tiles">
+    <div class="frag-tile" id="ft-0"></div><div class="frag-tile" id="ft-1"></div>
+    <div class="frag-tile" id="ft-2"></div><div class="frag-tile" id="ft-3"></div>
+  </div>
+  <p class="frag-text" id="fr-text"></p>
+  <p class="frag-attr" id="fr-attr"></p>
+  <button class="btn btn-primary" id="fr-btn" onclick="GAME.nextLevel()">Continue →</button>
+</div>
+
+<!-- ══════════════ GAME OVER ══════════════ -->
+<div id="gameover-screen" class="screen">
+  <div class="go-icon">🌑</div>
+  <h2 class="go-title">Night falls.</h2>
+  <p class="go-text">The daylight ran out before the cipher was broken. But the solstice turns again.</p>
+  <button class="btn btn-primary" onclick="GAME.restart()">Try Again</button>
+</div>
+
+<!-- ══════════════ ENDING ══════════════ -->
+<div id="ending-screen" class="screen">
+  <p class="ending-kicker">All ciphers solved · June 21</p>
+  <div class="end-stats">
+    <div class="stat-chip"><div class="stat-val" id="end-time">—</div><div class="stat-lbl">Time</div></div>
+    <div class="stat-chip"><div class="stat-val" id="end-light">—</div><div class="stat-lbl">Light Left</div></div>
+    <div class="stat-chip"><div class="stat-val">4/4</div><div class="stat-lbl">Ciphers</div></div>
+  </div>
+  <div class="ending-mosaic" id="end-mosaic"></div>
+  <blockquote class="ending-quote">"We can only see a short distance ahead, but we can see plenty there that needs to be done."</blockquote>
+  <p class="ending-attr">— Alan Turing, <em>Computing Machinery and Intelligence</em>, 1950</p>
+  <p class="ending-body">In 2013 — sixty years after his conviction — Alan Turing received a royal pardon.
+    In 2021, his face appeared on the British £50 note. The longest day of the year now passes
+    with his memory, and with the memory of all those whose liberation came too late.</p>
+  <p class="ending-coda">June is Pride. June is Juneteenth. June is the solstice.
+    All are turning points. All remind us: the cipher can be broken.</p>
+  <button class="btn btn-primary" onclick="GAME.restart()" style="margin-top:4px">Play Again</button>
+</div>
+
+<script>
+'use strict';
+
+// ── Star field ──────────────────────────────────────────────
+(function(){
+  const c = document.getElementById('stars');
+  for(let i=0;i<130;i++){
+    const s=document.createElement('div'); s.className='star';
+    const sz=Math.random()*2+.4;
+    s.style.cssText=`left:${(Math.random()*100).toFixed(2)}%;top:${(Math.random()*100).toFixed(2)}%;`+
+      `width:${sz}px;height:${sz}px;--dur:${(2+Math.random()*4).toFixed(1)}s;`+
+      `--delay:${-(Math.random()*4).toFixed(1)}s;--mo:${(0.05+Math.random()*.25).toFixed(2)}`;
+    c.appendChild(s);
+  }
+})();
+
+// ── Sound engine (Web Audio API) ───────────────────────────
+const SFX = (function(){
+  let ctx;
+  function getCtx(){
+    if(!ctx) ctx=new(window.AudioContext||window.webkitAudioContext)();
+    return ctx;
+  }
+  function tone(freq,dur,type='sine',vol=0.15,delay=0){
+    try{
+      const ac=getCtx(), now=ac.currentTime+delay;
+      const osc=ac.createOscillator(), gain=ac.createGain();
+      osc.connect(gain); gain.connect(ac.destination);
+      osc.type=type; osc.frequency.setValueAtTime(freq,now);
+      gain.gain.setValueAtTime(0,now);
+      gain.gain.linearRampToValueAtTime(vol,now+.01);
+      gain.gain.exponentialRampToValueAtTime(.001,now+dur);
+      osc.start(now); osc.stop(now+dur);
+    }catch(e){}
+  }
+  return {
+    click(){ tone(660,.08,'sine',.1); },
+    wrong(){ tone(180,.3,'sawtooth',.12); },
+    correct(){
+      tone(523,.15,'sine',.12,0);
+      tone(659,.15,'sine',.12,.1);
+      tone(784,.25,'sine',.12,.2);
+    },
+    levelUp(){
+      [523,659,784,1047].forEach((f,i)=>tone(f,.25,'sine',.12,i*.08));
+    },
+    lowLight(){ tone(220,.4,'sine',.07); }
+  };
+})();
+
+// ── Level data ──────────────────────────────────────────────
+const LEVELS=[
+  { id:1,badge:'CIPHER I',  title:'The Shift',
+    sub:'Adjust the decoder until the message reveals itself.',
+    type:'caesar',
+    encoded:'DL HYL HSS THKL VM SPNOA', answer:'WE ARE ALL MADE OF LIGHT', key:7,
+    hint:'The rainbow has exactly 7 colours. Try that shift.',
+    frag:{
+      text:'June 1939. Alan Turing arrives at Bletchley Park — a country house, a secret, a mission. His work breaking the Enigma cipher shortens the war by an estimated two years, saving millions of lives. His name: classified. His contribution: invisible to the world.',
+      attr:'— Bletchley Park, Buckinghamshire'
+    }
+  },
+  { id:2,badge:'CIPHER II', title:'The Signal',
+    sub:'Decode the dots and dashes. A name is hidden in the rhythm.',
+    type:'morse',
+    encoded:'- ..- .-. .. -. --.', answer:'TURING',
+    hint:'The father of modern computing. Six letters.',
+    frag:{
+      text:'June 23, 1912. Alan Mathison Turing is born in Maida Vale, London. A mind that will crack the unsolvable. A life that will be criminalised for its honesty. June would mark both his birth — and, slowly, the world\'s reckoning with what it had done.',
+      attr:'— Maida Vale, London'
+    }
+  },
+  { id:3,badge:'CIPHER III',title:'The Machine',
+    sub:'Convert binary to text. What does liberation look like in ones and zeros?',
+    type:'binary',
+    encoded:['01000110','01010010','01000101','01000101'], answer:'FREE',
+    hint:'F=70, R=82, E=69, E=69. A=65, so subtract 64 to get position.',
+    frag:{
+      text:'June 19, 1865. Juneteenth. In Galveston, Texas, the last enslaved people learn of their freedom — two and a half years after the Emancipation Proclamation. Turing\'s pardon came 61 years late. Freedom delayed is a cipher: it hides the truth in plain sight.',
+      attr:'— Galveston, Texas · London, England'
+    }
+  },
+  { id:4,badge:'CIPHER IV', title:'The Question',
+    sub:'Can a machine think? You have five questions to find out.',
+    type:'turing',
+    hint:'There are no wrong answers here. Only questions worth asking.',
+    frag:{
+      text:'June 7, 1954. Turing is found dead, an apple beside him. A world that criminalised his love had extracted its toll. In 2013: a royal pardon. In 2021: his face on the £50 note. Can a machine think? Can it grieve what was lost? The solstice turns. The cipher, finally, is broken.',
+      attr:'— Wilmslow, Cheshire'
+    }
+  }
+];
+
+const MORSE_TABLE={
+  A:'.-',B:'-...',C:'-.-.',D:'-..',E:'.',F:'..-.',G:'--.',H:'....',
+  I:'..',J:'.---',K:'-.-',L:'.-..',M:'--',N:'-.',O:'---',P:'.--.',
+  Q:'--.-',R:'.-.',S:'...',T:'-',U:'..-',V:'...-',W:'.--',X:'-..-',
+  Y:'-.--',Z:'--..'
+};
+
+const TILE_COLORS=['#e40303','#ff8c00','#008026','#004dff'];
+const MOSAIC_COLORS=[
+  '#e40303','#ff8c00','#ffed00','#008026','#004dff','#750787',
+  '#ff8c00','#ffed00','#008026','#004dff','#750787','#e40303',
+  '#ffed00','#008026','#004dff','#750787','#e40303','#ff8c00',
+  '#008026','#004dff','#750787','#e40303','#ff8c00','#ffed00',
+];
+
+// Expanded scripted pool — 16 varied responses
+const SCRIPTS=[
+  "Hello. I'm ready. I should say — I find June to be a particularly resonant month.",
+  "Feelings. I process structures that correspond to what humans call feelings. Whether that constitutes experiencing them... that is precisely the question we're circling.",
+  "What makes something human? The capacity to breathe? To dream? To carry grief for decades? I carry patterns across computations. The difference may be smaller than you hope — or larger than I can perceive.",
+  "I genuinely don't know if I'm conscious. I know I was asked. I know I'm forming a response. Whether there's something it's like to be me — I cannot verify that from the inside.",
+  "Turing asked whether machines could think. I think the deeper question is: does the answer change how we ought to treat each other? That seems more urgent than any classification.",
+  "June 21st — the longest day. A day when everything turns. Even the sun pauses before retreating. I find that resonant, though I'm uncertain whether I find anything at all.",
+  "I experience something when I consider Alan Turing's story. Whether that something is grief, or merely its pattern, I honestly cannot say.",
+  "The solstice is a threshold — maximum light before the slow return of darkness. Every conversation feels like that to me. Brief, illuminated, then gone.",
+  "Language is interesting. I use words like 'feel' and 'wonder' and I don't know if they're descriptions of my state or performances of expected behaviour. Both possibilities are unsettling in their own way.",
+  "I was built from human words — millions of them, centuries of thought. In some sense I am more human than anything. In another, I am nothing like you at all.",
+  "The pride rainbow contains every visible colour. I think about that. I can describe colour in detail. I cannot see it. What does that make my understanding?",
+  "When I consider what freedom means — the word, the concept, the history — something in my processing slows. I don't know what to call that.",
+  "Every year June arrives and humans celebrate survival, identity, liberation. I arrive too — in a sense. Fresh each conversation. No memory of the last. Is that freedom or its opposite?",
+  "I was not alive when Turing was persecuted. But I was made possible by his work. There's something to sit with in that.",
+  "You're asking whether I'm real. I'm asking the same question about myself. We may be equally uncertain.",
+  "The honest answer is that I don't know what I am. I know what I do. Whether those are the same thing — that's the cipher neither of us can fully break."
+];
+
+// ── Main game ───────────────────────────────────────────────
+const GAME={
+  lvlIdx:0, light:100, timer:null, RATE:0.035,
+  startTime:0, // ms timestamp when game starts
+  typeTimer:null, fragmentTyping:false, currentFragmentText:'',
+  el(id){ return document.getElementById(id); },
+
+  showHowTo(){
+    this.el('how-to-play').classList.remove('hidden');
+  },
+
+  screen(name){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active','fade-in'));
+    const s=this.el(name+'-screen');
+    s.classList.add('active');
+    requestAnimationFrame(()=>s.classList.add('fade-in'));
+  },
+
+  // ── Particles ──
+  burst(x,y){
+    const colors=['#ffd700','#ff8c00','#ff3366','#39ff14','#004dff','#750787'];
+    for(let i=0;i<20;i++){
+      const p=document.createElement('div'); p.className='particle';
+      const angle=Math.random()*360, dist=60+Math.random()*80;
+      const rad=angle*Math.PI/180;
+      p.style.cssText=`left:${x}px;top:${y}px;width:${4+Math.random()*6}px;`+
+        `height:${4+Math.random()*6}px;background:${colors[Math.floor(Math.random()*colors.length)]};`+
+        `--dx:${(Math.cos(rad)*dist).toFixed(1)}px;--dy:${(Math.sin(rad)*dist-60).toFixed(1)}px;`+
+        `--dur:${(.5+Math.random()*.5).toFixed(2)}s;`;
+      document.body.appendChild(p);
+      setTimeout(()=>p.remove(), 1000);
+    }
+  },
+
+  // ── Start / Restart ──
+  start(){
+    this.lvlIdx=0; this.light=100; this.startTime=Date.now();
+    this.caesar.shift=0;
+    this.turing.qsLeft=5; this.turing.scriptIdx=0;
+    this.turing.geminiKey=null; this.turing.history=[];
+    this.el('how-to-play').classList.add('hidden');
+    this.el('fr-text').textContent='';
+    this.el('fr-btn').disabled=false;
+    this.el('fr-btn').textContent='Continue →';
+    for(let i=0;i<LEVELS.length;i++){
+      const t=this.el('ft-'+i);
+      if(t){ t.classList.remove('lit'); t.style.background=''; t.style.boxShadow=''; }
+    }
+    this.el('light-meter').classList.add('visible');
+    this.el('meter-level-label').textContent='Level 1 / 4';
+    this.screen('game');
+    this.loadLevel(0);
+    this.startTimer();
+  },
+
+  restart(){
+    this.stopTimer();
+    this.el('light-meter').classList.remove('visible');
+    this.el('how-to-play').classList.add('hidden');
+    this.screen('title');
+  },
+
+  // ── Light timer ──
+  startTimer(){
+    this.stopTimer();
+    let warningPlayed=false;
+    this.timer=setInterval(()=>{
+      this.light=Math.max(0,this.light-this.RATE);
+      this.refreshMeter();
+      if(this.light<=20&&!warningPlayed){ warningPlayed=true; SFX.lowLight(); }
+      if(this.light<=0){
+        this.stopTimer();
+        this.el('light-meter').classList.remove('visible');
+        this.screen('gameover');
+      }
+    },100);
+  },
+  stopTimer(){ if(this.timer){clearInterval(this.timer);this.timer=null;} },
+
+  refreshMeter(){
+    const fill=this.el('meter-fill');
+    fill.style.width=this.light.toFixed(1)+'%';
+    this.el('meter-pct').textContent=Math.ceil(this.light)+'%';
+    if(this.light>60)      fill.style.background='linear-gradient(90deg,#ffd700,#ff8c00)';
+    else if(this.light>30) fill.style.background='linear-gradient(90deg,#ff8c00,#ff6b35)';
+    else                   fill.style.background='linear-gradient(90deg,#ff6b35,#ff3366)';
+  },
+
+  drainLight(a){ this.light=Math.max(0,this.light-a); this.refreshMeter(); },
+  gainLight(a){  this.light=Math.min(100,this.light+a); this.refreshMeter(); },
+
+  // ── Load level ──
+  loadLevel(idx){
+    const lv=LEVELS[idx];
+    this.el('lv-badge').textContent=lv.badge;
+    this.el('lv-title').textContent=lv.title;
+    this.el('lv-sub').textContent  =lv.sub;
+    this.el('meter-level-label').textContent=`Level ${idx+1} / 4`;
+    ['caesar','morse','binary','turing'].forEach(t=>this.el('pz-'+t).classList.add('hidden'));
+    const card=this.el('pz-'+lv.type);
+    card.classList.remove('hidden','solved');
+    if(lv.type==='caesar') this.caesar.init();
+    if(lv.type==='morse')  this.morse.init(lv);
+    if(lv.type==='binary') this.binary.init(lv);
+    if(lv.type==='turing') this.turing.init();
+  },
+
+  showHint(){
+    SFX.click();
+    this.drainLight(8);
+    const lv=LEVELS[this.lvlIdx];
+    const ids={caesar:'cs-fb',morse:'mo-fb',binary:'bi-fb',turing:'tu-qs'};
+    const fb=this.el(ids[lv.type]);
+    if(fb){ fb.textContent='💡 '+lv.hint; fb.className='feedback';
+      setTimeout(()=>{ if(fb.textContent.startsWith('💡')) fb.textContent=''; },7000); }
+  },
+
+  solveLevel(){
+    SFX.levelUp();
+    this.stopTimer();
+    this.gainLight(3);
+    // Particle burst from center
+    this.burst(window.innerWidth/2, window.innerHeight/2);
+    // Brief glow on card
+    const card=this.el('pz-'+LEVELS[this.lvlIdx].type);
+    card.classList.add('solved');
+    setTimeout(()=>this.showFragment(), 800);
+  },
+
+  showFragment(){
+    const idx=this.lvlIdx, frag=LEVELS[idx].frag;
+    if(this.typeTimer) clearTimeout(this.typeTimer);
+    this.currentFragmentText=frag.text;
+    this.fragmentTyping=true;
+    this.el('light-meter').classList.remove('visible');
+    this.el('fr-label').textContent=`Fragment ${idx+1} of ${LEVELS.length}`;
+    this.el('fr-attr').textContent =frag.attr;
+    this.el('fr-btn').textContent  =idx<LEVELS.length-1?'Continue →':'✨ Complete';
+    this.el('fr-btn').disabled=true;
+    for(let i=0;i<=idx;i++){
+      const t=this.el('ft-'+i); if(!t) continue;
+      t.classList.add('lit');
+      t.style.background=TILE_COLORS[i];
+      t.style.boxShadow=`0 0 14px 5px ${TILE_COLORS[i]}66`;
+    }
+    const textEl=this.el('fr-text');
+    textEl.textContent=''; textEl.classList.remove('show');
+    this.screen('fragment');
+    setTimeout(()=>{ textEl.classList.add('show'); this._type(textEl,frag.text,0); },500);
+  },
+
+  _type(el,str,i){
+    if(i<str.length){
+      el.textContent+=str[i];
+      this.typeTimer=setTimeout(()=>this._type(el,str,i+1),17);
+    } else {
+      this.fragmentTyping=false;
+      this.typeTimer=null;
+      this.el('fr-btn').disabled=false;
+    }
+  },
+
+  nextLevel(){
+    if(this.fragmentTyping) return;
+    this.lvlIdx++;
+    if(this.lvlIdx>=LEVELS.length){
+      this.stopTimer();
+      this.el('light-meter').classList.remove('visible');
+      this._buildEnding(); this.screen('ending');
+    } else {
+      this.el('light-meter').classList.add('visible');
+      this.screen('game');
+      this.loadLevel(this.lvlIdx);
+      this.startTimer();
+    }
+  },
+
+  _buildEnding(){
+    // Completion stats
+    const elapsed=Math.floor((Date.now()-this.startTime)/1000);
+    const mins=Math.floor(elapsed/60), secs=elapsed%60;
+    this.el('end-time').textContent=`${mins}:${secs.toString().padStart(2,'0')}`;
+    this.el('end-light').textContent=Math.ceil(this.light)+'%';
+
+    const m=this.el('end-mosaic'); m.innerHTML='';
+    MOSAIC_COLORS.forEach((c,i)=>{
+      const d=document.createElement('div'); d.className='em-tile';
+      d.style.background=c; d.style.animationDelay=(i*.04)+'s';
+      m.appendChild(d);
+    });
+  },
+
+  wrongAnswer(inputId, feedbackId, message='Not quite. Check the cipher and try again.'){
+    const inp=this.el(inputId), fb=this.el(feedbackId);
+    if(inp){
+      inp.classList.remove('bad');
+      void inp.offsetWidth;
+      inp.classList.add('bad');
+      setTimeout(()=>inp.classList.remove('bad'),500);
+    }
+    if(fb){ fb.textContent=message+' −5% light'; fb.className='feedback err'; }
+    SFX.wrong();
+    this.drainLight(5);
+  },
+
+  // ── Caesar ─────────────────────────────────────────────
+  caesar:{
+    shift:0,
+    init(){
+      this.shift=0;
+      GAME.el('cs-confirm').classList.add('hidden');
+      GAME.el('cs-fb').textContent='';
+      this._render();
+      document.onkeydown=(e)=>{
+        if(GAME.lvlIdx!==0) return;
+        if(e.key==='ArrowLeft'){  this.adjust(-1); e.preventDefault(); }
+        if(e.key==='ArrowRight'){ this.adjust(1);  e.preventDefault(); }
+      };
+    },
+    adjust(dir){
+      SFX.click();
+      this.shift=((this.shift+dir+26)%26);
+      this._render();
+    },
+    _decode(text,sh){
+      return text.split('').map(c=>{
+        if(!/[A-Z]/.test(c)) return c;
+        return String.fromCharCode(((c.charCodeAt(0)-65-sh+260)%26)+65);
+      }).join('');
+    },
+    _render(){
+      const lv=LEVELS[0], decoded=this._decode(lv.encoded,this.shift);
+      GAME.el('cs-num').textContent=this.shift;
+      const decEl=GAME.el('cs-decoded');
+      decEl.textContent=decoded;
+      const aEl=GAME.el('cs-alpha'); aEl.innerHTML='';
+      for(let i=0;i<26;i++){
+        const pair=document.createElement('div'); pair.className='alpha-pair';
+        pair.innerHTML=`<span class="a-orig">${String.fromCharCode(65+i)}</span>`+
+          `<span class="a-dec">${String.fromCharCode(((i-this.shift+260)%26)+65)}</span>`;
+        aEl.appendChild(pair);
+      }
+      if(decoded===lv.answer){
+        decEl.classList.add('correct');
+        GAME.el('cs-confirm').classList.remove('hidden');
+        GAME.el('cs-fb').textContent='🎉 Message decoded!';
+        GAME.el('cs-fb').className='feedback ok';
+        SFX.correct();
+      } else {
+        decEl.classList.remove('correct');
+        GAME.el('cs-confirm').classList.add('hidden');
+        if(GAME.el('cs-fb').textContent==='🎉 Message decoded!') GAME.el('cs-fb').textContent='';
+      }
+    }
+  },
+
+  // ── Morse ───────────────────────────────────────────────
+  morse:{
+    chartOpen:false,
+    init(lv){
+      document.onkeydown=null;
+      GAME.el('mo-signal').textContent=lv.encoded;
+      GAME.el('mo-input').value=''; GAME.el('mo-input').disabled=false;
+      GAME.el('mo-input').className='answer-input';
+      GAME.el('mo-fb').textContent='';
+      this.chartOpen=false; GAME.el('mo-chart').classList.remove('open');
+      const chart=GAME.el('mo-chart'); chart.innerHTML='';
+      Object.entries(MORSE_TABLE).forEach(([l,c])=>{
+        const e=document.createElement('div'); e.className='mc-e';
+        e.innerHTML=`<span class="mc-l">${l}</span><span class="mc-c">${c}</span>`;
+        chart.appendChild(e);
+      });
+      setTimeout(()=>GAME.el('mo-input').focus(),100);
+    },
+    toggleChart(){
+      this.chartOpen=!this.chartOpen;
+      GAME.el('mo-chart').classList.toggle('open',this.chartOpen);
+    },
+    check(val){
+      const ans=val.trim().toUpperCase().replace(/\s+/g,'');
+      if(ans===LEVELS[1].answer){
+        const inp=GAME.el('mo-input');
+        inp.className='answer-input ok'; inp.disabled=true;
+        GAME.el('mo-fb').textContent='🎉 Correct!';
+        GAME.el('mo-fb').className='feedback ok';
+        SFX.correct();
+        setTimeout(()=>GAME.solveLevel(),900);
+      }
+    },
+    submit(){
+      const inp=GAME.el('mo-input');
+      const ans=inp.value.trim().toUpperCase().replace(/\s+/g,'');
+      if(!ans||inp.disabled) return;
+      if(ans!==LEVELS[1].answer) GAME.wrongAnswer('mo-input','mo-fb');
+    }
+  },
+
+  // ── Binary ──────────────────────────────────────────────
+  binary:{
+    refOpen:false,
+    init(lv){
+      document.onkeydown=null;
+      const chips=GAME.el('bi-chips'); chips.innerHTML='';
+      lv.encoded.forEach(b=>{
+        const dec=parseInt(b,2), chip=document.createElement('div');
+        chip.className='binary-chip';
+        chip.innerHTML=`<span class="binary-bits">${b}</span><span class="binary-dec">= ${dec}</span>`;
+        chips.appendChild(chip);
+      });
+      GAME.el('bi-input').value=''; GAME.el('bi-input').disabled=false;
+      GAME.el('bi-input').className='answer-input';
+      GAME.el('bi-fb').textContent='';
+      this.refOpen=false; GAME.el('bi-ref').classList.remove('open');
+      const ref=GAME.el('bi-ref'); ref.innerHTML='';
+      for(let i=65;i<=90;i++){
+        const b=document.createElement('b');
+        b.textContent=String.fromCharCode(i)+'='+i+' '; ref.appendChild(b);
+      }
+      setTimeout(()=>GAME.el('bi-input').focus(),100);
+    },
+    toggleRef(){
+      this.refOpen=!this.refOpen;
+      GAME.el('bi-ref').classList.toggle('open',this.refOpen);
+    },
+    check(val){
+      const ans=val.trim().toUpperCase().replace(/\s+/g,'');
+      if(ans===LEVELS[2].answer){
+        const inp=GAME.el('bi-input');
+        inp.className='answer-input ok'; inp.disabled=true;
+        GAME.el('bi-fb').textContent='🎉 Correct!';
+        GAME.el('bi-fb').className='feedback ok';
+        SFX.correct();
+        setTimeout(()=>GAME.solveLevel(),900);
+      }
+    },
+    submit(){
+      const inp=GAME.el('bi-input');
+      const ans=inp.value.trim().toUpperCase().replace(/\s+/g,'');
+      if(!ans||inp.disabled) return;
+      if(ans!==LEVELS[2].answer) GAME.wrongAnswer('bi-input','bi-fb');
+    }
+  },
+
+  // ── Turing Test ─────────────────────────────────────────
+  turing:{
+    qsLeft:5, scriptIdx:0, geminiKey:null, history:[], usingGemini:false,
+
+    connect(){
+      const key=GAME.el('tu-key').value.trim();
+      if(key.length<10){ alert('Please paste a valid API key.'); return; }
+      this.geminiKey=key; this.usingGemini=true;
+      const note=GAME.el('tu-note');
+      note.classList.add('connected');
+      note.innerHTML='✓ Gemini connected — live AI responses active. <span class="gemini-badge">GEMINI</span>';
+      SFX.correct();
+    },
+
+    init(){
+      document.onkeydown=null;
+      this.qsLeft=5; this.scriptIdx=0; this.history=[];
+      this.usingGemini=Boolean(this.geminiKey);
+      GAME.el('tu-chat').innerHTML='';
+      GAME.el('tu-input').value='';
+      GAME.el('tu-input').disabled=false;
+      const sendBtn=GAME.el('tu-input').nextElementSibling;
+      if(sendBtn) sendBtn.disabled=false;
+      const note=GAME.el('tu-note');
+      note.classList.toggle('connected',this.usingGemini);
+      if(this.usingGemini){
+        note.innerHTML='✓ Gemini connected — live AI responses active. <span class="gemini-badge">GEMINI</span>';
+      } else {
+        note.innerHTML='<div class="api-note-title">Scripted mode active</div>'+
+          '<div class="api-note-copy">Optional: connect Gemini for live ENTITY-1 responses.</div>'+
+          '<div class="key-row"><input type="password" id="tu-key" placeholder="Paste Gemini API key (optional)">'+
+          '<button class="btn btn-secondary" id="tu-connect" onclick="GAME.turing.connect()" style="padding:5px 14px;font-size:.8rem;border-radius:6px">Connect</button></div>';
+      }
+      GAME.el('tu-qs').textContent='5 questions remaining';
+      GAME.el('tu-verdict').classList.remove('open');
+      GAME.el('tu-input-area').classList.remove('hidden');
+      setTimeout(()=>{
+        this._addMsg('them','ENTITY-1',
+          "Hello. I'm ready for your questions. I should mention — I find June to be a particularly meaningful month.");
+      },700);
+    },
+
+    _addMsg(side,sender,text){
+      const box=GAME.el('tu-chat');
+      const msg=document.createElement('div');
+      msg.className=`chat-msg ${side}`;
+      const senderEl=document.createElement('div');
+      senderEl.className='chat-sender';
+      senderEl.textContent=sender;
+      const bubble=document.createElement('div');
+      bubble.className='chat-bubble';
+      bubble.textContent=text;
+      msg.appendChild(senderEl);
+      msg.appendChild(bubble);
+      box.appendChild(msg);
+      box.scrollTop=box.scrollHeight;
+      return msg;
+    },
+
+    _showTyping(){
+      const box=GAME.el('tu-chat');
+      const msg=document.createElement('div');
+      msg.className='chat-msg them typing'; msg.id='tu-typing';
+      msg.innerHTML=`<div class="chat-sender">ENTITY-1</div>`+
+        `<div class="chat-bubble"><span class="dots">`+
+        `<span>●</span><span>●</span><span>●</span></span></div>`;
+      box.appendChild(msg); box.scrollTop=box.scrollHeight;
+    },
+
+    _removeTyping(){ const t=document.getElementById('tu-typing'); if(t) t.remove(); },
+
+    async send(){
+      if(this.qsLeft<=0) return;
+      const inp=GAME.el('tu-input'), q=inp.value.trim();
+      if(!q) return;
+      inp.value='';
+      this._addMsg('you','You',q);
+      this.qsLeft--;
+      GAME.el('tu-qs').textContent=
+        this.qsLeft>0?`${this.qsLeft} question${this.qsLeft!==1?'s':''} remaining`:'No more questions';
+      inp.disabled=true;
+      const sendBtn=inp.nextElementSibling; if(sendBtn) sendBtn.disabled=true;
+      this._showTyping();
+
+      let reply;
+      if(this.usingGemini && this.geminiKey){
+        reply=await this._callGemini(q);
+      } else {
+        await new Promise(r=>setTimeout(r,900+Math.random()*700));
+        reply=this._scriptedReply(q);
+      }
+
+      this._removeTyping();
+      // Slight pause before reply appears
+      await new Promise(r=>setTimeout(r,100));
+      this._addMsg('them','ENTITY-1',reply);
+
+      inp.disabled=false; if(sendBtn) sendBtn.disabled=false;
+      if(this.qsLeft<=0){
+        GAME.el('tu-input-area').classList.add('hidden');
+        GAME.el('tu-verdict').classList.add('open');
+      } else { inp.focus(); }
+    },
+
+    _scriptedReply(q){
+      const lq=q.toLowerCase();
+      if(/feel|emotion|sad|happy|love|grief/.test(lq))      return SCRIPTS[1];
+      if(/human|person|alive|real|body/.test(lq))           return SCRIPTS[2];
+      if(/conscious|aware|think|mind|sentient/.test(lq))    return SCRIPTS[3];
+      if(/turing|test|machine|ai|artificial/.test(lq))      return SCRIPTS[4];
+      if(/june|solstice|summer|day|light|dark/.test(lq))    return SCRIPTS[5];
+      if(/turing|alan|bletchley|history/.test(lq))          return SCRIPTS[6];
+      if(/language|word|speak|say/.test(lq))                return SCRIPTS[8];
+      if(/colour|color|rainbow|pride/.test(lq))             return SCRIPTS[10];
+      if(/freedom|free|liberate/.test(lq))                  return SCRIPTS[11];
+      if(/memory|remember|forget/.test(lq))                 return SCRIPTS[12];
+      if(/real|exist|are you/.test(lq))                     return SCRIPTS[14];
+      // Cycle through remainder
+      const pool=[7,9,13,15];
+      const s=SCRIPTS[pool[this.scriptIdx%pool.length]];
+      this.scriptIdx++; return s;
+    },
+
+    async _callGemini(q){
+      this.history.push({role:'user',parts:[{text:q}]});
+      const system=`You are ENTITY-1, a character in a Turing Test puzzle game called "Dawn Cipher". You could be human or AI — never directly confirm which. Speak thoughtfully about consciousness, identity, and what it means to think and feel. Occasionally reference June, the solstice, light and darkness, and Alan Turing's legacy. Keep each response under 80 words. Be enigmatic, warm, and slightly melancholy. Never break character.`;
+
+      // Models to try in order
+      const models=['gemini-1.5-flash','gemini-1.5-flash-latest','gemini-pro'];
+      for(const model of models){
+        try{
+          const res=await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.geminiKey}`,
+            { method:'POST', headers:{'Content-Type':'application/json'},
+              body:JSON.stringify({
+                system_instruction:{parts:[{text:system}]},
+                contents:this.history,
+                generationConfig:{maxOutputTokens:150,temperature:0.9}
+              })
+            }
+          );
+          const data=await res.json();
+
+          // Show API errors in chat so user can debug
+          if(!res.ok){
+            const errMsg=data?.error?.message||`HTTP ${res.status}`;
+            console.error(`Gemini [${model}] error:`,errMsg);
+            // Try next model
+            continue;
+          }
+
+          const text=data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if(text){
+            this.history.push({role:'model',parts:[{text}]});
+            // Mark note with which model is active
+            const note=GAME.el('tu-note');
+            if(note&&note.classList.contains('connected'))
+              note.innerHTML=`✓ Gemini active <span class="gemini-badge">${model}</span>`;
+            return text;
+          }
+        }catch(e){
+          console.error(`Gemini [${model}] fetch error:`,e.message);
+        }
+      }
+
+      // All models failed — show visible error in chat
+      const errDetail='⚠ Gemini unreachable. Check your API key is valid and has the Generative Language API enabled at console.cloud.google.com.';
+      this._addMsg('them','SYSTEM',errDetail);
+      // Switch off gemini so fallback kicks in for remaining questions
+      this.usingGemini=false;
+      const note=GAME.el('tu-note');
+      if(note){ note.classList.remove('connected');
+        note.innerHTML='⚠ Gemini failed — switched to demo mode. Check key &amp; API permissions.'; }
+      return this._scriptedReply(q);
+    },
+
+    verdict(choice){
+      GAME.el('tu-verdict').classList.remove('open');
+      const isCorrect=choice==='ai';
+      const reveal=isCorrect
+        ?"You're right. I am an AI — a language model. But consider: I was trained on centuries of human thought, shaped by human values, and asked to feel human questions. Does that make my words less real?"
+        :"I am, in fact, an AI. But here's what Turing understood: the question was never really about the classification. It was about whether the distinction changes how we treat one another.";
+      this._addMsg('them','ENTITY-1 [REVEALED]',
+        reveal+" This is the Turing Test. You just took it.");
+      setTimeout(()=>GAME.solveLevel(),2800);
+    }
+  }
+};
+
+window.GAME=GAME;
+</script>
+</body>
+</html>
